@@ -130,9 +130,7 @@ def tune_weights(
 
     # variables: v(r, l) = rule r takes level l
     model = QUBOModel(n_rules * n_lev)
-    model.labels = [
-        f"{rules[r]}={levels[lv_i]}" for r in range(n_rules) for lv_i in range(n_lev)
-    ]
+    model.labels = [f"{rules[r]}={levels[lv_i]}" for r in range(n_rules) for lv_i in range(n_lev)]
     scale = 10.0
     lam = scale * 3.0
 

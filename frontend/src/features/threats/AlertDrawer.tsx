@@ -96,6 +96,11 @@ export function AlertDrawer({ alertId, onClose }: { alertId: string | null; onCl
           <div className="border-t border-border pt-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
               Verification event · {formatDateTime(data.event.created_at)}
+              {data.event.anomaly_score != null && (
+                <span className="ml-2 text-accent">
+                  ML anomaly {data.event.anomaly_score.toFixed(2)}
+                </span>
+              )}
             </p>
             <VerificationResultCard result={data.event.result_json} />
           </div>

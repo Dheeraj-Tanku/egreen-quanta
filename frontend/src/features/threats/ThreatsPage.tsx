@@ -5,9 +5,10 @@ import { cn } from "@/lib/cn";
 
 import { AlertsPanel } from "./AlertsPanel";
 import { IncidentsPanel } from "./IncidentsPanel";
+import { MlPanel } from "./MlPanel";
 import { RulesPanel } from "./RulesPanel";
 
-type Tab = "alerts" | "incidents" | "rules";
+type Tab = "alerts" | "incidents" | "rules" | "ml";
 
 export function ThreatsPage() {
   const [tab, setTab] = useState<Tab>("alerts");
@@ -15,6 +16,7 @@ export function ThreatsPage() {
     ["alerts", "Alerts"],
     ["incidents", "Incidents"],
     ["rules", "Rules"],
+    ["ml", "ML model"],
   ];
 
   return (
@@ -42,6 +44,7 @@ export function ThreatsPage() {
       {tab === "alerts" && <AlertsPanel />}
       {tab === "incidents" && <IncidentsPanel />}
       {tab === "rules" && <RulesPanel />}
+      {tab === "ml" && <MlPanel />}
     </>
   );
 }

@@ -9,6 +9,7 @@ from app.api.v1 import (
     auth,
     certificates,
     detections,
+    ml,
     quantum,
     signatures,
     system,
@@ -36,6 +37,9 @@ api_router.include_router(threats.router)
 
 # M4 — Quantum-inspired optimisation
 api_router.include_router(quantum.router)
+
+# M5 — ML anomaly detection (optional)
+api_router.include_router(ml.router)
 
 # Registered as modules land:
 #   quantum                         (M4)

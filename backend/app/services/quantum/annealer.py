@@ -243,9 +243,7 @@ def solve(
     if method == "sa":
         return simulated_annealing(model, sweeps=sweeps or 2000, restarts=restarts, seed=seed)
     if method == "sqa":
-        return simulated_quantum_annealing(
-            model, sweeps=sweeps or 1500, trotter=trotter, seed=seed
-        )
+        return simulated_quantum_annealing(model, sweeps=sweeps or 1500, trotter=trotter, seed=seed)
 
     # method == "best" (or "brute" on an oversized model): race SA and SQA.
     sa = simulated_annealing(model, sweeps=sweeps or 2200, restarts=max(restarts, 12), seed=seed)

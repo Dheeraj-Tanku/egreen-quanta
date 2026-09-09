@@ -390,3 +390,29 @@ export interface QuantumRun {
   input_ref: string | null;
   created_at: string;
 }
+
+// ---- Module 5: ML anomaly detection ----
+
+export interface MlStatus {
+  enabled: boolean;
+  active_model_id: string | null;
+  feature_schema_version: number;
+  feature_count: number;
+  anomaly_weight: number;
+}
+
+export interface MlModel {
+  id: string;
+  algo: "isolation_forest" | "one_class_svm";
+  params: Record<string, unknown>;
+  metrics: Record<string, number>;
+  feature_schema_version: number;
+  n_train: number;
+  threshold: number;
+  artifact_sha256: string;
+  is_active: boolean;
+  source: string;
+  notes: string;
+  trained_by: string | null;
+  trained_at: string;
+}

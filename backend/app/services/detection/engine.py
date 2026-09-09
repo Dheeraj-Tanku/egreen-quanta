@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.alert import Alert
 from app.models.detection_rule import DetectionRule
@@ -106,11 +107,26 @@ async def run_detection(
         config={**configs.get("T15", {}), **configs.get("T14", {})},
     )
 
+    # optional local ML anomaly score (advisory; never overrides a crypto verdict)
+    anomaly_score: float | None = None
+    if settings.ml_enabled:
+        from app.services.ml.scorer import score_verification
+
+        anomaly_score, ml_finding = await score_verification(session, result, created_at=now)
+        if ml_finding is not None:
+            history_findings = [*history_findings, ml_finding]
+
     all_findings: list[CryptoFinding] = [
         f for f in [*result.findings, *history_findings] if f.code not in disabled
     ]
 
-    score = risk_score(all_findings, rule_weights=weights, disabled_codes=disabled)
+    score = risk_score(
+        all_findings,
+        rule_weights=weights,
+        disabled_codes=disabled,
+        anomaly_score=anomaly_score,
+        anomaly_weight=settings.ml_anomaly_weight if anomaly_score is not None else 0.0,
+    )
 
     envelope = (
         EnvelopeType(result.envelope)
@@ -136,6 +152,7 @@ async def run_detection(
         chain_status=result.chain.status if result.chain else None,
         revocation_status=result.revocation.status if result.revocation else None,
         risk_score=score,
+        anomaly_score=anomaly_score,
         submitter_id=submitter_id,
         submitter_ip_hash=ip_hash,
         payload_sha256=result.payload_sha256,

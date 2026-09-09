@@ -24,6 +24,7 @@ ignore = [
 "tests/**" = ["S", "B011", "ARG"]
 "tests/conftest.py" = ["S", "B011", "ARG", "E402"]  # env + sys.path must precede imports
 "app/db/migrations/**" = ["E501", "F401"]
+"app/services/ml/registry.py" = ["ASYNC240"]  # fast local-FS metadata checks, not I/O-bound
 "app/services/crypto/hashes.py" = ["S324"]  # weak-hash detection needs md5/sha1 refs
 
 [tool.mypy]
