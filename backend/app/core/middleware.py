@@ -54,11 +54,39 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()"
         )
         headers.setdefault("Cache-Control", "no-store")
+        headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
         if settings.is_prod:
             headers.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
             headers.setdefault(
                 "Content-Security-Policy",
                 "default-src 'self'; frame-ancestors 'none'; object-src 'none'; "
-                "base-uri 'self'; form-action 'self'",
+                "base-uri 'self'; form-action 'self'; connect-src 'self'; img-src 'self' data:",
             )
         return response
+
+
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject oversized request bodies early (defence in depth; routes also check)."""
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        cl = request.headers.get("content-length")
+        if cl is not None:
+            try:
+                declared = int(cl)
+            except ValueError:
+                declared = 0
+            hard_cap = (settings.max_upload_mb + 5) * 1024 * 1024
+            if declared > hard_cap:
+                from fastapi.responses import JSONResponse
+
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "error": {
+                            "code": "payload_too_large",
+                            "message": f"Request body exceeds {settings.max_upload_mb + 5} MB",
+                        }
+                    },
+                )
+        return await call_next(request)

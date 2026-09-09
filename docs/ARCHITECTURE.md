@@ -279,16 +279,27 @@ Each module has a **Definition of Done (DoD)**: code + migrations + tests + API 
 - Optional email/Slack notification sink for high-severity alerts (off by default).
 - **DoD:** a new alert appears in the UI within 1 s without refresh; ingest respects rate limits.
 
-### Module 9 — Hardening, tests, deployment
-- `slowapi` rate limits, full security-header set, request-size limits, `defusedxml`, dependency
-  audit (`pip-audit`, `npm audit`), secrets via env/Docker secrets, non-root containers,
-  `docker-compose.prod.yml` (+ Nginx TLS, gunicorn/uvicorn workers, Celery, Redis).
-- Test suites: backend pytest (crypto vectors, auth, RBAC, every rule, QUBO optimality, audit
-  tamper), frontend Vitest + Testing Library, Playwright smoke (login → verify → alert → incident
-  → quantum run → audit verify).
-- `scripts/` — `gen_test_pki.py`, `gen_sample_signatures.py`, `load_test.py`; `seed.py` demo data.
-- Docs: `README`, `docs/API.md`, `docs/QUANTUM.md`, runbook, threat-model doc, demo script.
-- **DoD:** one-command prod bring-up; CI green; coverage targets met (backend ≥ 85% on services).
+### Module 9 — Hardening, tests, deployment ✅
+- **Request-path hardening:** in-house rate limiter (auth/verify/ingest — `slowapi` was
+  dropped, it broke FastAPI signature introspection), full security-header set incl.
+  `Cross-Origin-Opener-Policy` / `-Resource-Policy` and a prod CSP, `BodySizeLimitMiddleware`
+  (413 over `MAX_UPLOAD_MB + 5`), prod-only `TrustedHostMiddleware` (`ALLOWED_HOSTS`),
+  `defusedxml.defuse_stdlib()` at startup, secrets via env / Docker secrets, fail-closed
+  weak-`SECRET_KEY` check.
+- **Deployment:** `docker-compose.prod.yml` — PostgreSQL + Redis + gunicorn/uvicorn web
+  workers + a **dedicated `worker` container** running the scheduler (`python -m
+  app.workers.scheduler`, so web workers run `SCHEDULER_ENABLED=false`) + a TLS-terminating
+  nginx `edge` (HSTS, TLS 1.2/1.3, SSE-aware). Every service non-root, healthchecked, no
+  published ports except the edge. `deploy/nginx/{edge.conf,gen-selfsigned.sh}`.
+- **Tests:** backend pytest — 140 tests (crypto vectors, auth, RBAC, every rule, QUBO
+  optimality vs brute force, audit tamper-location, SSE delivery, ingest, hardening
+  middleware); frontend Vitest. CI also lints `scripts/` and runs an advisory `pip-audit`.
+- `scripts/` — `gen_test_pki.py`, `gen_sample_signatures.py` (raw / JWS / CMS / PAdES demo
+  artifacts into `datasets/documents/`), `load_test.py` (stdlib-only, RPS + latency
+  percentiles); `app.seeds.seed` demo data.
+- **Docs:** `README`, `SECURITY.md`, `docs/{API,QUANTUM,THREAT_MODEL,RUNBOOK,DEMO}.md`, `adr/`.
+- **DoD:** one-command prod bring-up (`docker compose -f docker-compose.prod.yml up -d`);
+  `ruff` + `mypy` + `pytest` green; the demo script in `docs/DEMO.md` runs end to end.
 
 ---
 

@@ -62,11 +62,7 @@ class DemoPKI:
     leaves: dict[str, Issued] = field(default_factory=dict)
 
     def chain_pem(self, leaf_name: str) -> str:
-        return (
-            self.leaves[leaf_name].cert_pem
-            + self.intermediate.cert_pem
-            + self.root.cert_pem
-        )
+        return self.leaves[leaf_name].cert_pem + self.intermediate.cert_pem + self.root.cert_pem
 
 
 def _sign(

@@ -23,7 +23,7 @@ a modern dark SOC dashboard with a tamper-evident audit log.
 | Quantum-inspired | NumPy (simulated annealing / simulated quantum annealing over QUBO) |
 | ML (optional) | scikit-learn — IsolationForest / One-Class SVM, off by default |
 | Data | PostgreSQL 16 (prod) · SQLite (dev) |
-| Infra | Docker + Compose · Nginx · Redis + Celery (prod) · GitHub Actions |
+| Infra | Docker + Compose · Nginx (TLS edge) · Redis + dedicated scheduler worker (prod) · GitHub Actions |
 
 ## Modules
 
@@ -38,7 +38,7 @@ a modern dark SOC dashboard with a tamper-evident audit log.
 | 6 | Audit logging (hash-chained, verifiable) | ✅ done — 127 backend tests; append-only SHA-256 chain, middleware records every mutating request + auth events, tamper-detection verifier (locates the break), Ed25519 anchor + signed export, audit viewer UI |
 | 7 | SOC dashboard consolidation | ✅ done — dashboard top-detections + recent-alerts + PQC-exposure panels, light/dark/system theme toggle, mobile nav drawer, skip-link + ARIA pass, token-driven charts |
 | 8 | Real-time & integrations (SSE, jobs, ingest API) | ✅ done — 139 backend tests; SSE `/stream/alerts` with live UI updates + toasts, API-key `/ingest/{signatures,events}`, dependency-free async scheduler (audit anchor, retention purge), optional Slack/SMTP notifications |
-| 9 | Hardening, tests, deployment | 🔜 in progress |
+| 9 | Hardening, tests, deployment | ✅ done — 140 backend tests; request-path hardening (TrustedHost, body-size limit, expanded headers, `defusedxml`), `docker-compose.prod.yml` (Postgres + Redis + dedicated scheduler worker + TLS nginx edge), `scripts/gen_sample_signatures.py` + `scripts/load_test.py`, `SECURITY.md` + `docs/{RUNBOOK,DEMO,API,THREAT_MODEL}.md`, CI lints `scripts/` + advisory `pip-audit` |
 
 ## Quick start
 
@@ -76,8 +76,19 @@ cp .env.example .env      # then edit secrets
 docker compose up --build
 ```
 
-Frontend on `http://localhost:8080` (Nginx), API proxied at `/api`. Production-hardened stack
-(Redis, Celery, TLS) via `docker compose -f docker-compose.prod.yml up -d`.
+Frontend on `http://localhost:8080` (Nginx), API proxied at `/api`.
+
+**Production-hardened stack** (PostgreSQL + Redis + a dedicated scheduler worker + a
+TLS-terminating nginx edge):
+
+```bash
+cp .env.example .env                          # set SECRET_KEY, POSTGRES_PASSWORD, REDIS_PASSWORD,
+                                              #     ALLOWED_HOSTS, CORS_ORIGINS
+sh deploy/nginx/gen-selfsigned.sh your-host   # or drop real certs in deploy/nginx/certs/
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Runbook: [`docs/RUNBOOK.md`](docs/RUNBOOK.md). Demo script: [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Repository layout
 
@@ -92,17 +103,23 @@ docs/        # ARCHITECTURE.md, API.md, QUANTUM.md, THREAT_MODEL.md, adr/
 ## Testing
 
 ```bash
-make test        # backend pytest + frontend vitest
-make test-e2e    # Playwright smoke flow
+make test        # backend pytest (140) + frontend vitest
 make lint        # ruff + mypy + eslint + tsc
+make typecheck   # mypy + tsc only
 ```
+
+Capacity check against a running stack: `python scripts/load_test.py --scenario verify -n 500 -c 16`.
 
 ## Security
 
-See [`docs/ARCHITECTURE.md` §6](docs/ARCHITECTURE.md#6-security-architecture). Highlights: Argon2id,
-rotating refresh tokens with reuse detection, RBAC, strict security headers, `slowapi` rate limits,
-SSRF-guarded revocation fetches, tamper-evident audit log, non-root containers, secrets via env /
-Docker secrets. **Change every secret in `.env.example` before deploying.**
+See [`SECURITY.md`](SECURITY.md) and [`docs/ARCHITECTURE.md` §6](docs/ARCHITECTURE.md#6-security-architecture).
+Highlights: Argon2id, rotating refresh tokens with family-based reuse detection, ranked RBAC,
+in-process rate limits (auth / verify / ingest), strict security headers + prod CSP/HSTS,
+`TrustedHostMiddleware` + request-body size cap, `defusedxml` at startup, SSRF-guarded revocation
+fetches (off by default), tamper-evident SHA-256 audit chain with an integrity verifier, non-root
+containers with no published ports behind a TLS edge, secrets via env / Docker secrets, and a
+fail-closed check that refuses to boot prod with a weak `SECRET_KEY`.
+**Change every secret in `.env.example` before deploying.** Threat model: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 
 ## License
 

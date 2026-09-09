@@ -21,6 +21,7 @@ cryptography>=44,<46
 asn1crypto>=1.5
 pyhanko>=0.25
 pyhanko-certvalidator>=0.26
+defusedxml>=0.7
 
 # --- analytics ---
 numpy>=2.1,<3

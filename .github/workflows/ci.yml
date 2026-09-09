@@ -25,8 +25,13 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: ruff check .
       - run: ruff format --check .
+      - name: Lint helper scripts
+        run: ruff check ../scripts && ruff format --check ../scripts
       - run: mypy app
       - run: pytest --cov=app --cov-report=term-missing
+      - name: Dependency vulnerability audit (advisory)
+        continue-on-error: true
+        run: pip install pip-audit && pip-audit -r requirements.txt
       - name: Alembic migrations apply cleanly
         run: alembic upgrade head
         env:

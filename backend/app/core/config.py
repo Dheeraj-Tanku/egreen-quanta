@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://localhost:8080"]
     )
+    # Host/:authority allow-list for TrustedHostMiddleware (prod only). "*" disables the check.
+    allowed_hosts: list[str] = Field(default_factory=lambda: ["*"])
 
     # ---- Audit ----
     audit_signing_key: str | None = None
@@ -98,7 +100,7 @@ class Settings(BaseSettings):
     smtp_from: str = "egreen-quanta@localhost"
     slack_webhook: str | None = None
 
-    @field_validator("cors_origins", "trusted_tsa_urls", mode="before")
+    @field_validator("cors_origins", "trusted_tsa_urls", "allowed_hosts", mode="before")
     @classmethod
     def _split_csv(cls, value: object) -> object:
         if isinstance(value, str):

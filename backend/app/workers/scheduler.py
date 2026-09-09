@@ -122,3 +122,32 @@ def default_jobs() -> list[Job]:
 
 
 scheduler = Scheduler()
+
+
+async def _run_forever() -> None:
+    """Standalone entrypoint: run the scheduler as its own process until signalled.
+
+    Used by the production compose ``worker`` service so the web workers can run
+    with ``SCHEDULER_ENABLED=false`` (avoiding N copies of every periodic job).
+    """
+    import contextlib
+    import signal
+
+    from app.core.logging import configure_logging
+
+    configure_logging()
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        with contextlib.suppress(NotImplementedError):  # Windows has no add_signal_handler
+            loop.add_signal_handler(sig, stop.set)
+
+    scheduler.start(default_jobs())
+    log.info("standalone_scheduler_running")
+    await stop.wait()
+    log.info("standalone_scheduler_stopping")
+    await scheduler.stop()
+
+
+if __name__ == "__main__":
+    asyncio.run(_run_forever())

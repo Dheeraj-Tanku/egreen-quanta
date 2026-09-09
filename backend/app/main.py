@@ -4,16 +4,26 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+import defusedxml
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app import __version__
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging, get_logger
-from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
+from app.core.middleware import (
+    BodySizeLimitMiddleware,
+    RequestContextMiddleware,
+    SecurityHeadersMiddleware,
+)
 from app.services.audit.middleware import AuditMiddleware
+
+# Defence in depth: neutralise the stdlib XML parsers against entity-expansion /
+# external-entity attacks before anything (pyHanko, asn1crypto) touches untrusted XML.
+defusedxml.defuse_stdlib()
 
 log = get_logger()
 
@@ -83,7 +93,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # --- middleware (outermost first) ---
+    # --- middleware ---
+    # Starlette applies the LAST-added middleware as the outermost layer, so the
+    # effective request path is: TrustedHost -> BodySizeLimit -> Audit ->
+    # RequestContext -> SecurityHeaders -> CORS -> router.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -96,6 +109,10 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     if not settings.is_test:
         app.add_middleware(AuditMiddleware)
+    app.add_middleware(BodySizeLimitMiddleware)
+    allow_hosts = [h for h in settings.allowed_hosts if h]
+    if settings.is_prod and allow_hosts and allow_hosts != ["*"]:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allow_hosts)
 
     register_exception_handlers(app)
 
