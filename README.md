@@ -37,8 +37,8 @@ a modern dark SOC dashboard with a tamper-evident audit log.
 | 5 | ML anomaly detection (local, optional) | ✅ done — 116 backend tests; scikit-learn IsolationForest / One-Class SVM, 42-feature pipeline, model registry + activation, advisory T19 into the risk engine, off by default (`ML_ENABLED=false`), `scripts/gen_ml_dataset.py` |
 | 6 | Audit logging (hash-chained, verifiable) | ✅ done — 127 backend tests; append-only SHA-256 chain, middleware records every mutating request + auth events, tamper-detection verifier (locates the break), Ed25519 anchor + signed export, audit viewer UI |
 | 7 | SOC dashboard consolidation | ✅ done — dashboard top-detections + recent-alerts + PQC-exposure panels, light/dark/system theme toggle, mobile nav drawer, skip-link + ARIA pass, token-driven charts |
-| 8 | Real-time & integrations (SSE, jobs, ingest API) | 🔜 in progress |
-| 9 | Hardening, tests, deployment | ⬜ |
+| 8 | Real-time & integrations (SSE, jobs, ingest API) | ✅ done — 139 backend tests; SSE `/stream/alerts` with live UI updates + toasts, API-key `/ingest/{signatures,events}`, dependency-free async scheduler (audit anchor, retention purge), optional Slack/SMTP notifications |
+| 9 | Hardening, tests, deployment | 🔜 in progress |
 
 ## Quick start
 

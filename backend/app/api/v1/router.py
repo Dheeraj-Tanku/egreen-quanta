@@ -10,9 +10,11 @@ from app.api.v1 import (
     auth,
     certificates,
     detections,
+    ingest,
     ml,
     quantum,
     signatures,
+    stream,
     system,
     threats,
     trust_store,
@@ -44,6 +46,10 @@ api_router.include_router(ml.router)
 
 # M6 — Audit logging
 api_router.include_router(audit.router)
+
+# M8 — Real-time & integrations
+api_router.include_router(stream.router)
+api_router.include_router(ingest.router)
 
 # Registered as modules land:
 #   quantum                         (M4)

@@ -250,11 +250,7 @@ async def stats(session: SessionDep, _: CurrentUser) -> ThreatStats:
     top_rules = [{"code": c, "count": int(n)} for c, n in top_rule_rows]
 
     recent_rows = (
-        (
-            await session.execute(
-                select(Alert).order_by(Alert.created_at.desc()).limit(5)
-            )
-        )
+        (await session.execute(select(Alert).order_by(Alert.created_at.desc()).limit(5)))
         .scalars()
         .all()
     )

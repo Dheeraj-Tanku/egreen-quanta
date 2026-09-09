@@ -83,9 +83,14 @@ class Settings(BaseSettings):
 
     # ---- Background jobs ----
     redis_url: str | None = None
+    scheduler_enabled: bool = True
+    audit_anchor_enabled: bool = True
+    audit_anchor_interval_hours: float = 24.0
+    retention_days: int = 0  # 0 = keep everything
 
     # ---- Notifications (optional) ----
     notify_high_severity: bool = False
+    notify_email_to: str | None = None
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_user: str | None = None

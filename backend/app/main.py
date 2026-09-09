@@ -29,7 +29,23 @@ async def lifespan(_: FastAPI):
         db="sqlite" if settings.is_sqlite else "postgresql",
     )
     await _sync_detection_rules()
+
+    started_scheduler = False
+    if settings.scheduler_enabled and not settings.is_test:
+        try:
+            from app.workers.scheduler import default_jobs, scheduler
+
+            scheduler.start(default_jobs())
+            started_scheduler = True
+        except Exception as exc:  # pragma: no cover
+            log.warning("scheduler_start_failed", error=str(exc))
+
     yield
+
+    if started_scheduler:
+        from app.workers.scheduler import scheduler
+
+        await scheduler.stop()
     log.info("shutdown")
 
 

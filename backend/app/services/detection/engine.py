@@ -200,10 +200,43 @@ async def run_detection(
         await session.commit()
         incident = await correlate(session, alert, event)
         incident_id = incident.id
+        await _broadcast(alert, incident_id)
 
     return DetectionOutcome(
         event=event, findings=finding_rows, alert=alert, incident_id=incident_id
     )
+
+
+async def _broadcast(alert: Alert, incident_id: str | None) -> None:
+    try:
+        from app.services.realtime import broker
+
+        await broker.publish(
+            {
+                "type": "alert",
+                "id": alert.id,
+                "title": alert.title,
+                "severity": alert.severity,
+                "risk_score": alert.risk_score,
+                "rule_codes": alert.rule_codes,
+                "incident_id": incident_id,
+                "created_at": alert.created_at.isoformat() if alert.created_at else None,
+            }
+        )
+    except Exception as exc:  # pragma: no cover - realtime is best-effort
+        log.warning("alert_broadcast_failed", error=str(exc))
+
+    try:
+        from app.services.notifications import notify_alert
+
+        await notify_alert(
+            title=alert.title,
+            severity=alert.severity,
+            risk_score=alert.risk_score,
+            rule_codes=alert.rule_codes,
+        )
+    except Exception as exc:  # pragma: no cover - notifications are best-effort
+        log.warning("alert_notify_failed", error=str(exc))
 
 
 def _code_priority(code: str) -> int:

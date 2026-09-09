@@ -8,7 +8,13 @@ import type { SystemInfo } from "@/types/api";
 
 import { ThemeToggle } from "./ThemeToggle";
 
-export function Topbar({ onMenu }: { onMenu?: () => void }) {
+export function Topbar({
+  onMenu,
+  streamConnected,
+}: {
+  onMenu?: () => void;
+  streamConnected?: boolean;
+}) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -47,6 +53,18 @@ export function Topbar({ onMenu }: { onMenu?: () => void }) {
             ML on
           </Badge>
         ) : null}
+        <span
+          className="ml-1 hidden items-center gap-1 sm:inline-flex"
+          title={streamConnected ? "Live updates connected" : "Live updates offline"}
+        >
+          <span
+            className={
+              "inline-block h-1.5 w-1.5 rounded-full " +
+              (streamConnected ? "animate-pulse bg-accent" : "bg-muted")
+            }
+          />
+          {streamConnected ? "live" : "offline"}
+        </span>
       </div>
 
       <div className="relative flex items-center gap-3 text-xs">
