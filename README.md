@@ -33,8 +33,8 @@ a modern dark SOC dashboard with a tamper-evident audit log.
 | 1 | Identity & access (Argon2id, JWT, RBAC, TOTP) | ✅ done — 25 backend tests, 4 frontend tests, live auth flow verified |
 | 2 | Cryptographic core (RSA/ECC, X.509, CRL/OCSP, PAdES/CMS/JWS) | ✅ done — 65 backend tests, verify + trust-store + certificate UI, demo PKI generated |
 | 3 | Threat detection engine (19 rules + correlation + scoring) | ✅ done — 83 backend tests, event/alert/incident model, risk scoring, greedy correlation, alert feed + incident kanban + rules config UI, live SOC dashboard |
-| 4 | Quantum-inspired optimisation (risk scoring · tuning · correlation) | 🔜 in progress |
-| 5 | ML anomaly detection (local, optional) | ⬜ |
+| 4 | Quantum-inspired optimisation (risk scoring · tuning · correlation) | ✅ done — 104 backend tests; NumPy SA + SQA over QUBO (brute-force-verified), Quantum Exposure Score + PQC migration planner, detection-weight tuning, correlation QUBO, Quantum Lab UI, [docs/QUANTUM.md](docs/QUANTUM.md) |
+| 5 | ML anomaly detection (local, optional) | 🔜 in progress |
 | 6 | Audit logging (hash-chained, verifiable) | ⬜ |
 | 7 | SOC dashboard consolidation | ⬜ |
 | 8 | Real-time & integrations (SSE, jobs, ingest API) | ⬜ |

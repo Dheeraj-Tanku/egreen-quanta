@@ -9,6 +9,7 @@ from app.api.v1 import (
     auth,
     certificates,
     detections,
+    quantum,
     signatures,
     system,
     threats,
@@ -32,6 +33,9 @@ api_router.include_router(trust_store.router)
 # M3 — Threat detection engine
 api_router.include_router(detections.router)
 api_router.include_router(threats.router)
+
+# M4 — Quantum-inspired optimisation
+api_router.include_router(quantum.router)
 
 # Registered as modules land:
 #   quantum                         (M4)

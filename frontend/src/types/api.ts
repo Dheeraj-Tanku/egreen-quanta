@@ -277,3 +277,116 @@ export interface ThreatStats {
   mean_time_to_triage_seconds: number | null;
   timeline: { date: string; valid: number; invalid: number; indeterminate: number }[];
 }
+
+// ---- Module 4: quantum-inspired optimisation ----
+
+export type QESBand = "ok" | "monitor" | "plan" | "immediate";
+
+export interface QESResult {
+  qes: number;
+  band: QESBand;
+  algo_factor: number;
+  strength_factor: number;
+  longevity_factor: number;
+  exposure_factor: number;
+  recommendation: string;
+  assumptions: Record<string, unknown>;
+  label: string;
+}
+
+export interface PortfolioItem {
+  label: string;
+  spki_sha256: string | null;
+  algo: string | null;
+  key_bits: number | null;
+  curve: string | null;
+  qes: number;
+  band: QESBand;
+  event_count: number;
+}
+
+export interface PortfolioResult {
+  items: PortfolioItem[];
+  scored: number;
+  by_band: Record<string, number>;
+  mean_qes: number;
+}
+
+export interface SolverInfo {
+  method: string;
+  best_energy: number;
+  energy_trajectory: number[];
+  sweeps: number;
+  restarts: number;
+  seed: number;
+  wall_ms: number;
+  optimal: boolean | null;
+  optimality_gap: number | null;
+  params: Record<string, unknown>;
+}
+
+export interface MigrationWaveMember {
+  name: string;
+  qes: number;
+  criticality: number;
+  effort: number;
+  label: string;
+}
+
+export interface MigrationPlanResult {
+  waves: MigrationWaveMember[][];
+  wave_capacity: number;
+  total_waves: number;
+  cumulative_exposure: number;
+  baseline_exposure: number;
+  improvement_pct: number;
+  solver: SolverInfo;
+  unassigned: string[];
+  notes: string[];
+  run_id: string;
+}
+
+export interface TuningMetrics {
+  precision: number;
+  recall: number;
+  f1: number;
+  tp: number;
+  fp: number;
+  tn: number;
+  fn: number;
+}
+
+export interface TuningResult {
+  weights: Record<string, number>;
+  levels: number[];
+  threshold: number;
+  before: TuningMetrics;
+  after: TuningMetrics;
+  solver: SolverInfo;
+  rules: string[];
+  sample_size: number;
+  source: string;
+  run_id: string;
+}
+
+export interface CorrelationResult {
+  clusters: string[][];
+  cluster_density: number[];
+  singletons: string[];
+  qubo_modularity: number;
+  baseline_modularity: number;
+  event_count: number;
+  run_id: string;
+}
+
+export interface QuantumRun {
+  id: string;
+  run_type: string;
+  method: string;
+  seed: number;
+  wall_ms: number;
+  params: Record<string, unknown>;
+  metrics: Record<string, unknown>;
+  input_ref: string | null;
+  created_at: string;
+}

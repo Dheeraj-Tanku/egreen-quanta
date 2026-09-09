@@ -13,6 +13,7 @@ from app.models.certificate import Certificate
 from app.models.detection_rule import DetectionRule
 from app.models.enums import ApiKeyScope, UserRole
 from app.models.login_attempt import LoginAttempt
+from app.models.quantum import QuantumExposureScore, QuantumRun
 from app.models.refresh_token import RefreshToken
 from app.models.trust_anchor import CaAllowlistEntry, TrustAnchor
 from app.models.user import User
@@ -30,6 +31,8 @@ __all__ = [
     "Finding",
     "Incident",
     "LoginAttempt",
+    "QuantumExposureScore",
+    "QuantumRun",
     "RefreshToken",
     "TrustAnchor",
     "User",

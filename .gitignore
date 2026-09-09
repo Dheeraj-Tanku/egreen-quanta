@@ -36,6 +36,8 @@ frontend/coverage/
 frontend/.vite-dev.log
 frontend/.vite-dev.err.log
 frontend/.vite.pid
+frontend/.vd.log
+frontend/.vd.err
 *.local
 .eslintcache
 
