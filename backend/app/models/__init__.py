@@ -7,25 +7,32 @@ populated for Alembic autogenerate. Model modules are appended here as each buil
 from __future__ import annotations
 
 from app.db.base import Base
-
-# Module 1 — Identity & access
+from app.models.alert import Alert, AlertNote, Incident
 from app.models.api_key import ApiKey
 from app.models.certificate import Certificate
+from app.models.detection_rule import DetectionRule
 from app.models.enums import ApiKeyScope, UserRole
 from app.models.login_attempt import LoginAttempt
 from app.models.refresh_token import RefreshToken
 from app.models.trust_anchor import CaAllowlistEntry, TrustAnchor
 from app.models.user import User
+from app.models.verification_event import Finding, VerificationEvent
 
 __all__ = [
+    "Alert",
+    "AlertNote",
     "ApiKey",
     "ApiKeyScope",
     "Base",
     "CaAllowlistEntry",
     "Certificate",
+    "DetectionRule",
+    "Finding",
+    "Incident",
     "LoginAttempt",
     "RefreshToken",
     "TrustAnchor",
     "User",
     "UserRole",
+    "VerificationEvent",
 ]

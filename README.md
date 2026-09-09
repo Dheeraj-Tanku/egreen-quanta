@@ -32,8 +32,8 @@ a modern dark SOC dashboard with a tamper-evident audit log.
 | 0 | Foundation & scaffolding | ✅ done — backend + frontend build, lint, typecheck, test green |
 | 1 | Identity & access (Argon2id, JWT, RBAC, TOTP) | ✅ done — 25 backend tests, 4 frontend tests, live auth flow verified |
 | 2 | Cryptographic core (RSA/ECC, X.509, CRL/OCSP, PAdES/CMS/JWS) | ✅ done — 65 backend tests, verify + trust-store + certificate UI, demo PKI generated |
-| 3 | Threat detection engine (17 rules + correlation + scoring) | 🔜 in progress |
-| 4 | Quantum-inspired optimisation (risk scoring · tuning · correlation) | ⬜ |
+| 3 | Threat detection engine (19 rules + correlation + scoring) | ✅ done — 83 backend tests, event/alert/incident model, risk scoring, greedy correlation, alert feed + incident kanban + rules config UI, live SOC dashboard |
+| 4 | Quantum-inspired optimisation (risk scoring · tuning · correlation) | 🔜 in progress |
 | 5 | ML anomaly detection (local, optional) | ⬜ |
 | 6 | Audit logging (hash-chained, verifiable) | ⬜ |
 | 7 | SOC dashboard consolidation | ⬜ |

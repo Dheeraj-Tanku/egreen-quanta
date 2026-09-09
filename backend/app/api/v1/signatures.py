@@ -1,17 +1,21 @@
-"""Signature verification routes (Module 2)."""
+"""Signature verification routes (Module 2 + Module 3 detection)."""
 
 from __future__ import annotations
 
+import base64
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, client_ip
 from app.core.config import settings
 from app.core.exceptions import ValidationAppError
 from app.core.rate_limit import VERIFY_LIMIT, rate_limit
+from app.core.security import hash_ip
+from app.models.enums import EventSource
 from app.schemas.crypto import RawVerifyRequest, VerificationOut
 from app.services.crypto import engine
+from app.services.detection.engine import attach_detection
 
 router = APIRouter(prefix="/signatures", tags=["signatures"])
 
@@ -21,8 +25,9 @@ _VerifyRate = Depends(rate_limit("verify", VERIFY_LIMIT))
 @router.post("/verify", response_model=VerificationOut, dependencies=[_VerifyRate])
 async def verify_signature(
     payload: RawVerifyRequest,
+    request: Request,
     session: SessionDep,
-    _: CurrentUser,
+    user: CurrentUser,
 ) -> VerificationOut:
     if not payload.certificate_pem and not payload.public_key_pem:
         raise ValidationAppError("Provide certificate_pem or public_key_pem")
@@ -37,13 +42,27 @@ async def verify_signature(
         is_prehashed=payload.is_prehashed,
         verify_time=payload.verify_time,
     )
-    return VerificationOut.model_validate(result.as_dict())
+    try:
+        sig_bytes = base64.b64decode(payload.signature_b64, validate=True)
+    except (ValueError, base64.binascii.Error):  # type: ignore[attr-defined]
+        sig_bytes = None
+    enriched = await attach_detection(
+        session,
+        result,
+        source=EventSource.API,
+        source_ref="signatures/verify",
+        submitter_id=user.id,
+        ip_hash=hash_ip(client_ip(request)),
+        signature_bytes=sig_bytes,
+    )
+    return VerificationOut.model_validate(enriched)
 
 
 @router.post("/verify-document", response_model=VerificationOut, dependencies=[_VerifyRate])
 async def verify_document(
+    request: Request,
     session: SessionDep,
-    _: CurrentUser,
+    user: CurrentUser,
     file: Annotated[UploadFile, File(description="Signed PDF, CMS/PKCS#7, or compact JWS")],
     detached_content: Annotated[
         UploadFile | None, File(description="Original content for a detached CMS signature")
@@ -67,4 +86,12 @@ async def verify_document(
         content=content,
         external_content=external,
     )
-    return VerificationOut.model_validate(result.as_dict())
+    enriched = await attach_detection(
+        session,
+        result,
+        source=EventSource.UPLOAD,
+        source_ref=(file.filename or "upload")[:255],
+        submitter_id=user.id,
+        ip_hash=hash_ip(client_ip(request)),
+    )
+    return VerificationOut.model_validate(enriched)

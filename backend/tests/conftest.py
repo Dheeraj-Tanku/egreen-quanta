@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import AsyncIterator, Awaitable, Callable
+from pathlib import Path
 
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-use-only-x")
 os.environ.setdefault("ML_ENABLED", "false")
+
+_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
 
 import app.models  # noqa: F401  (populate metadata)
 import pytest
@@ -132,3 +138,38 @@ def as_user(client: AsyncClient) -> Callable[[User], AsyncClient]:
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
     return "asyncio"
+
+
+# ---- demo PKI (shared across crypto + detection tests) ----
+
+
+@pytest.fixture(scope="session")
+def demo_pki():
+    from gen_test_pki import build_demo_pki
+
+    return build_demo_pki()
+
+
+def sign_bytes(
+    key, message: bytes, *, hash_name: str = "sha256", rsa_padding: str = "pss"
+) -> bytes:
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec, ed25519, padding, rsa
+
+    halg = {
+        "sha256": hashes.SHA256(),
+        "sha384": hashes.SHA384(),
+        "sha512": hashes.SHA512(),
+    }[hash_name]
+    if isinstance(key, rsa.RSAPrivateKey):
+        pad = (
+            padding.PSS(mgf=padding.MGF1(halg), salt_length=padding.PSS.DIGEST_LENGTH)
+            if rsa_padding == "pss"
+            else padding.PKCS1v15()
+        )
+        return key.sign(message, pad, halg)
+    if isinstance(key, ec.EllipticCurvePrivateKey):
+        return key.sign(message, ec.ECDSA(halg))
+    if isinstance(key, ed25519.Ed25519PrivateKey):
+        return key.sign(message)
+    raise TypeError(f"unsupported key type {type(key)}")

@@ -171,3 +171,109 @@ export interface ObservedCertificate {
   first_seen_at: string;
   last_seen_at: string;
 }
+
+// ---- Module 3: threat detection ----
+
+export interface DetectionRule {
+  code: string;
+  name: string;
+  description: string;
+  category: string;
+  default_severity: FindingSeverity;
+  enabled: boolean;
+  weight: number;
+  config: Record<string, unknown>;
+}
+
+export type AlertStatus = "open" | "triaged" | "closed";
+export type IncidentStatus = "open" | "investigating" | "contained" | "closed";
+
+export interface FindingRow {
+  id: string;
+  rule_code: string;
+  title: string;
+  severity: FindingSeverity;
+  category: string;
+  detail: string;
+  created_at: string;
+}
+
+export interface EventListItem {
+  id: string;
+  created_at: string;
+  source: string;
+  envelope_type: string;
+  verdict: Verdict;
+  algo: string | null;
+  signer_subject: string | null;
+  chain_status: string | null;
+  revocation_status: string | null;
+  risk_score: number;
+  summary: string;
+}
+
+export interface EventDetail extends EventListItem {
+  source_ref: string | null;
+  hash_alg: string | null;
+  key_type: string | null;
+  key_bits: number | null;
+  curve: string | null;
+  signer_spki_sha256: string | null;
+  signing_time: string | null;
+  tsa_present: boolean;
+  payload_sha256: string | null;
+  anomaly_score: number | null;
+  findings: FindingRow[];
+  result_json: VerificationResult;
+}
+
+export interface Alert {
+  id: string;
+  event_id: string;
+  incident_id: string | null;
+  title: string;
+  severity: FindingSeverity;
+  status: AlertStatus;
+  risk_score: number;
+  rule_codes: string[];
+  assigned_to: string | null;
+  triaged_by: string | null;
+  triaged_at: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlertDetail extends Alert {
+  event: EventDetail;
+}
+
+export interface Incident {
+  id: string;
+  title: string;
+  status: IncidentStatus;
+  severity: FindingSeverity;
+  cohesion_score: number;
+  method: string;
+  alert_count: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  signals: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface IncidentDetail extends Incident {
+  alerts: Alert[];
+}
+
+export interface ThreatStats {
+  events_24h: number;
+  events_total: number;
+  invalid_24h: number;
+  open_alerts: number;
+  alerts_by_severity: Record<string, number>;
+  open_incidents: number;
+  quantum_vulnerable_events: number;
+  mean_time_to_triage_seconds: number | null;
+  timeline: { date: string; valid: number; invalid: number; indeterminate: number }[];
+}

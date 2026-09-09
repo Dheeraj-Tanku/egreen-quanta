@@ -105,6 +105,11 @@ class VerificationOut(BaseModel):
     findings: list[FindingOut]
     payload_sha256: str | None
     summary: str
+    # populated by the detection engine (Module 3)
+    risk_score: float = 0.0
+    event_id: str | None = None
+    alert_id: str | None = None
+    incident_id: str | None = None
 
 
 # ---- trust store ----

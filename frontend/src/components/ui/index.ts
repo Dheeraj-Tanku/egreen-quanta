@@ -6,4 +6,5 @@ export { PageHeader } from "./PageHeader";
 export { EmptyState, ModulePlaceholder } from "./EmptyState";
 export { Input, Select, Field } from "./Input";
 export { Dialog } from "./Dialog";
+export { Drawer } from "./Drawer";
 export { Table, Th, Td } from "./Table";

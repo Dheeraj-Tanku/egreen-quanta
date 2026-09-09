@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, client_ip
+from app.core.security import hash_ip
 from app.models.certificate import Certificate
+from app.models.enums import EventSource
 from app.schemas.common import Page
 from app.schemas.crypto import CertificateOut, CertValidateRequest, VerificationOut
 from app.services.crypto import engine
+from app.services.detection.engine import attach_detection
 
 router = APIRouter(prefix="/certificates", tags=["certificates"])
 
@@ -17,8 +20,9 @@ router = APIRouter(prefix="/certificates", tags=["certificates"])
 @router.post("/validate", response_model=VerificationOut)
 async def validate_certificate(
     payload: CertValidateRequest,
+    request: Request,
     session: SessionDep,
-    _: CurrentUser,
+    user: CurrentUser,
 ) -> VerificationOut:
     result = await engine.validate_certificate(
         session,
@@ -27,7 +31,15 @@ async def validate_certificate(
         expected_eku=payload.expected_eku,
         verify_time=payload.verify_time,
     )
-    return VerificationOut.model_validate(result.as_dict())
+    enriched = await attach_detection(
+        session,
+        result,
+        source=EventSource.API,
+        source_ref="certificates/validate",
+        submitter_id=user.id,
+        ip_hash=hash_ip(client_ip(request)),
+    )
+    return VerificationOut.model_validate(enriched)
 
 
 @router.get("", response_model=Page[CertificateOut])

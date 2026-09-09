@@ -8,8 +8,10 @@ from app.api.v1 import (
     api_keys,
     auth,
     certificates,
+    detections,
     signatures,
     system,
+    threats,
     trust_store,
     users,
 )
@@ -27,8 +29,11 @@ api_router.include_router(signatures.router)
 api_router.include_router(certificates.router)
 api_router.include_router(trust_store.router)
 
+# M3 — Threat detection engine
+api_router.include_router(detections.router)
+api_router.include_router(threats.router)
+
 # Registered as modules land:
-#   detections, threats             (M3)
 #   quantum                         (M4)
 #   ml                              (M5)
 #   audit                           (M6)
