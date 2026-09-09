@@ -33,6 +33,9 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/coverage/
+frontend/.vite-dev.log
+frontend/.vite-dev.err.log
+frontend/.vite.pid
 *.local
 .eslintcache
 
