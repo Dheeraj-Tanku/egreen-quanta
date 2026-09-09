@@ -13,8 +13,9 @@ from app.api.deps import CurrentUser, SessionDep, require_min_role
 from app.core.exceptions import NotFoundError
 from app.models.alert import Alert, AlertNote, Incident
 from app.models.enums import AlertStatus, IncidentStatus, UserRole
+from app.models.quantum import QuantumExposureScore
 from app.models.user import User
-from app.models.verification_event import VerificationEvent
+from app.models.verification_event import Finding, VerificationEvent
 from app.schemas.common import Page
 from app.schemas.threats import (
     AlertDetail,
@@ -235,6 +236,47 @@ async def stats(session: SessionDep, _: CurrentUser) -> ThreatStats:
         b[verdict] = b.get(verdict, 0) + 1
     timeline = [{"date": d, **counts} for d, counts in sorted(buckets.items())]
 
+    # top firing rules (24h)
+    top_rule_rows = (
+        await session.execute(
+            select(Finding.rule_code, func.count())
+            .join(VerificationEvent, VerificationEvent.id == Finding.event_id)
+            .where(VerificationEvent.created_at >= day_ago)
+            .group_by(Finding.rule_code)
+            .order_by(func.count().desc())
+            .limit(6)
+        )
+    ).all()
+    top_rules = [{"code": c, "count": int(n)} for c, n in top_rule_rows]
+
+    recent_rows = (
+        (
+            await session.execute(
+                select(Alert).order_by(Alert.created_at.desc()).limit(5)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    recent_alerts = [
+        {
+            "id": a.id,
+            "title": a.title,
+            "severity": a.severity,
+            "status": a.status,
+            "risk_score": a.risk_score,
+            "created_at": a.created_at.isoformat(),
+        }
+        for a in recent_rows
+    ]
+
+    pqc_rows = (
+        await session.execute(
+            select(QuantumExposureScore.band, func.count()).group_by(QuantumExposureScore.band)
+        )
+    ).all()
+    pqc_by_band = {b: int(n) for b, n in pqc_rows}
+
     return ThreatStats(
         events_24h=int(events_24h),
         events_total=int(events_total),
@@ -245,4 +287,7 @@ async def stats(session: SessionDep, _: CurrentUser) -> ThreatStats:
         quantum_vulnerable_events=int(qv),
         mean_time_to_triage_seconds=mttt,
         timeline=timeline,
+        top_rules=top_rules,
+        recent_alerts=recent_alerts,
+        pqc_by_band=pqc_by_band,
     )

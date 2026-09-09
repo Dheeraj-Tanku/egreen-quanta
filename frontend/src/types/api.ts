@@ -276,6 +276,16 @@ export interface ThreatStats {
   quantum_vulnerable_events: number;
   mean_time_to_triage_seconds: number | null;
   timeline: { date: string; valid: number; invalid: number; indeterminate: number }[];
+  top_rules: { code: string; count: number }[];
+  recent_alerts: {
+    id: string;
+    title: string;
+    severity: FindingSeverity;
+    status: AlertStatus;
+    risk_score: number;
+    created_at: string;
+  }[];
+  pqc_by_band: Record<string, number>;
 }
 
 // ---- Module 4: quantum-inspired optimisation ----

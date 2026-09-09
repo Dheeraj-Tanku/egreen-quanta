@@ -148,3 +148,6 @@ class ThreatStats(BaseModel):
     quantum_vulnerable_events: int
     mean_time_to_triage_seconds: float | None
     timeline: list[dict]
+    top_rules: list[dict] = []
+    recent_alerts: list[dict] = []
+    pqc_by_band: dict[str, int] = {}

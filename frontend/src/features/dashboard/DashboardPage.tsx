@@ -14,16 +14,9 @@ import {
 
 import { Card, LoadingPane, PageHeader } from "@/components/ui";
 import { api } from "@/lib/api";
+import { axisTick, BAND_COLOR, SEVERITY_COLOR as SEV_COLOR, tooltipStyle } from "@/lib/chart";
 import { formatNumber } from "@/lib/format";
 import type { ThreatStats } from "@/types/api";
-
-const SEV_COLOR: Record<string, string> = {
-  critical: "rgb(244 63 94)",
-  high: "rgb(251 146 60)",
-  medium: "rgb(250 204 21)",
-  low: "rgb(96 165 250)",
-  info: "rgb(129 140 248)",
-};
 
 export function DashboardPage() {
   const { data, isLoading } = useQuery({
@@ -86,36 +79,29 @@ export function DashboardPage() {
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={data.timeline} margin={{ left: -20, right: 8, top: 8 }}>
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "rgb(138 150 170)" }} />
-                <YAxis tick={{ fontSize: 11, fill: "rgb(138 150 170)" }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "rgb(15 20 30)",
-                    border: "1px solid rgb(38 48 68)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                />
+                <XAxis dataKey="date" tick={axisTick} />
+                <YAxis tick={axisTick} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} />
                 <Area
                   type="monotone"
                   dataKey="valid"
                   stackId="1"
-                  stroke="rgb(52 211 153)"
-                  fill="rgb(52 211 153 / 0.25)"
+                  stroke="rgb(var(--ok))"
+                  fill="rgb(var(--ok) / 0.25)"
                 />
                 <Area
                   type="monotone"
                   dataKey="indeterminate"
                   stackId="1"
-                  stroke="rgb(250 204 21)"
-                  fill="rgb(250 204 21 / 0.25)"
+                  stroke="rgb(var(--medium))"
+                  fill="rgb(var(--medium) / 0.25)"
                 />
                 <Area
                   type="monotone"
                   dataKey="invalid"
                   stackId="1"
-                  stroke="rgb(244 63 94)"
-                  fill="rgb(244 63 94 / 0.3)"
+                  stroke="rgb(var(--critical))"
+                  fill="rgb(var(--critical) / 0.3)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -138,17 +124,10 @@ export function DashboardPage() {
                   paddingAngle={2}
                 >
                   {donut.map((d) => (
-                    <Cell key={d.name} fill={SEV_COLOR[d.name] ?? "rgb(138 150 170)"} />
+                    <Cell key={d.name} fill={SEV_COLOR[d.name] ?? "rgb(var(--muted))"} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "rgb(15 20 30)",
-                    border: "1px solid rgb(38 48 68)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                />
+                <Tooltip contentStyle={tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -163,6 +142,94 @@ export function DashboardPage() {
               </span>
             ))}
           </div>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <Card>
+          <h3 className="mb-2 text-sm font-semibold">Top detections (24h)</h3>
+          {data.top_rules.length === 0 ? (
+            <p className="text-xs text-muted">No findings in the last 24 hours.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {data.top_rules.map((r) => {
+                const max = data.top_rules[0].count || 1;
+                return (
+                  <li key={r.code} className="flex items-center gap-2 text-xs">
+                    <span className="w-10 font-mono text-muted">{r.code}</span>
+                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
+                      <span
+                        className="block h-full rounded-full bg-primary"
+                        style={{ width: `${(r.count / max) * 100}%` }}
+                      />
+                    </span>
+                    <span className="w-6 text-right tabular-nums text-fg">{r.count}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Recent alerts</h3>
+            <Link to="/threats" className="text-xs text-primary">
+              all →
+            </Link>
+          </div>
+          {data.recent_alerts.length === 0 ? (
+            <p className="text-xs text-muted">No alerts yet.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {data.recent_alerts.map((a) => (
+                <li key={a.id} className="flex items-center gap-2 text-xs">
+                  <span
+                    className="inline-block h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: SEV_COLOR[a.severity] ?? "rgb(var(--muted))" }}
+                  />
+                  <span className="flex-1 truncate text-fg" title={a.title}>
+                    {a.title}
+                  </span>
+                  <span className="tabular-nums text-muted">{a.risk_score}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Post-quantum exposure</h3>
+            <Link to="/quantum" className="text-xs text-primary">
+              lab →
+            </Link>
+          </div>
+          {Object.keys(data.pqc_by_band).length === 0 ? (
+            <p className="text-xs text-muted">
+              Score the portfolio in the Quantum Lab to populate this.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {(["immediate", "plan", "monitor", "ok"] as const).map((band) => {
+                const n = data.pqc_by_band[band] ?? 0;
+                const total = Object.values(data.pqc_by_band).reduce((s, x) => s + x, 0) || 1;
+                const color = BAND_COLOR[band];
+                return (
+                  <div key={band} className="flex items-center gap-2 text-xs">
+                    <span className="w-16 text-muted">{band}</span>
+                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
+                      <span
+                        className="block h-full rounded-full"
+                        style={{ width: `${(n / total) * 100}%`, background: color }}
+                      />
+                    </span>
+                    <span className="w-6 text-right tabular-nums text-fg">{n}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       </div>
     </>

@@ -1,5 +1,6 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { axisTick, tooltipStyle } from "@/lib/chart";
 import type { SolverInfo } from "@/types/api";
 
 export function EnergyChart({ solver }: { solver: SolverInfo }) {
@@ -24,24 +25,13 @@ export function EnergyChart({ solver }: { solver: SolverInfo }) {
       </div>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data} margin={{ left: -14, right: 8, top: 8 }}>
-          <XAxis
-            dataKey="sweep"
-            tick={{ fontSize: 10, fill: "rgb(138 150 170)" }}
-            label={{ value: "sweep", position: "insideBottom", fontSize: 10, fill: "rgb(138 150 170)" }}
-          />
-          <YAxis tick={{ fontSize: 10, fill: "rgb(138 150 170)" }} width={56} />
-          <Tooltip
-            contentStyle={{
-              background: "rgb(15 20 30)",
-              border: "1px solid rgb(38 48 68)",
-              borderRadius: 8,
-              fontSize: 12,
-            }}
-          />
+          <XAxis dataKey="sweep" tick={{ ...axisTick, fontSize: 10 }} />
+          <YAxis tick={{ ...axisTick, fontSize: 10 }} width={56} />
+          <Tooltip contentStyle={tooltipStyle} />
           <Line
             type="monotone"
             dataKey="energy"
-            stroke="rgb(45 212 191)"
+            stroke="rgb(var(--accent))"
             strokeWidth={1.6}
             dot={false}
           />

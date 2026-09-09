@@ -36,8 +36,8 @@ a modern dark SOC dashboard with a tamper-evident audit log.
 | 4 | Quantum-inspired optimisation (risk scoring · tuning · correlation) | ✅ done — 104 backend tests; NumPy SA + SQA over QUBO (brute-force-verified), Quantum Exposure Score + PQC migration planner, detection-weight tuning, correlation QUBO, Quantum Lab UI, [docs/QUANTUM.md](docs/QUANTUM.md) |
 | 5 | ML anomaly detection (local, optional) | ✅ done — 116 backend tests; scikit-learn IsolationForest / One-Class SVM, 42-feature pipeline, model registry + activation, advisory T19 into the risk engine, off by default (`ML_ENABLED=false`), `scripts/gen_ml_dataset.py` |
 | 6 | Audit logging (hash-chained, verifiable) | ✅ done — 127 backend tests; append-only SHA-256 chain, middleware records every mutating request + auth events, tamper-detection verifier (locates the break), Ed25519 anchor + signed export, audit viewer UI |
-| 7 | SOC dashboard consolidation | 🔜 in progress |
-| 8 | Real-time & integrations (SSE, jobs, ingest API) | ⬜ |
+| 7 | SOC dashboard consolidation | ✅ done — dashboard top-detections + recent-alerts + PQC-exposure panels, light/dark/system theme toggle, mobile nav drawer, skip-link + ARIA pass, token-driven charts |
+| 8 | Real-time & integrations (SSE, jobs, ingest API) | 🔜 in progress |
 | 9 | Hardening, tests, deployment | ⬜ |
 
 ## Quick start

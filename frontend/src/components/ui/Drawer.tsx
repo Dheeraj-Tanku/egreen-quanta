@@ -1,17 +1,21 @@
 import { useEffect, type ReactNode } from "react";
 
+import { cn } from "@/lib/cn";
+
 export function Drawer({
   open,
   onClose,
   title,
   children,
   width = "32rem",
+  side = "right",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   width?: string;
+  side?: "left" | "right";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -22,11 +26,23 @@ export function Drawer({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onMouseDown={onClose}>
+    <div
+      className={cn(
+        "fixed inset-0 z-50 flex bg-black/50",
+        side === "right" ? "justify-end" : "justify-start",
+      )}
+      onMouseDown={onClose}
+    >
       <div
-        className="flex h-full flex-col border-l border-border bg-surface shadow-2xl"
+        className={cn(
+          "flex h-full flex-col bg-surface shadow-2xl",
+          side === "right" ? "border-l border-border" : "border-r border-border",
+        )}
         style={{ width }}
         onMouseDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-fg">{title}</h2>
