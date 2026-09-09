@@ -1,0 +1,12 @@
+
+> egreen-quanta-frontend@0.1.0 dev
+> vite --port 5173
+
+
+  VITE v6.4.3  ready in 347 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+22:40:17 [vite] (client) hmr update /src/styles/index.css, /src/lib/auth.tsx
+22:41:01 [vite] (client) hmr update /src/features/signatures/SignaturesPage.tsx, /src/styles/index.css
+22:41:31 [vite] (client) hmr update /src/features/certificates/CertificatesPage.tsx, /src/styles/index.css
