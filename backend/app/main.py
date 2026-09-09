@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
+from app.services.audit.middleware import AuditMiddleware
 
 log = get_logger()
 
@@ -77,6 +78,8 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestContextMiddleware)
+    if not settings.is_test:
+        app.add_middleware(AuditMiddleware)
 
     register_exception_handlers(app)
 

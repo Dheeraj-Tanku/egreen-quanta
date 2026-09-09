@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     api_keys,
+    audit,
     auth,
     certificates,
     detections,
@@ -40,6 +41,9 @@ api_router.include_router(quantum.router)
 
 # M5 — ML anomaly detection (optional)
 api_router.include_router(ml.router)
+
+# M6 — Audit logging
+api_router.include_router(audit.router)
 
 # Registered as modules land:
 #   quantum                         (M4)

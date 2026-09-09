@@ -43,6 +43,19 @@ async def _record_attempt(
             reason=reason,
         )
     )
+    try:
+        from app.services.audit.events import auth_event
+
+        await auth_event(
+            session,
+            action="auth.login.success" if success else "auth.login.failure",
+            email=email.lower(),
+            actor_id=None,
+            ip_hash=hash_ip(ip),
+            reason=reason,
+        )
+    except Exception:
+        log.warning("audit_auth_failed")
 
 
 async def authenticate(

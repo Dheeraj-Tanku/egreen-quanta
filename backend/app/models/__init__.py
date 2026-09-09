@@ -9,6 +9,7 @@ from __future__ import annotations
 from app.db.base import Base
 from app.models.alert import Alert, AlertNote, Incident
 from app.models.api_key import ApiKey
+from app.models.audit import AuditLog
 from app.models.certificate import Certificate
 from app.models.detection_rule import DetectionRule
 from app.models.enums import ApiKeyScope, UserRole
@@ -25,6 +26,7 @@ __all__ = [
     "AlertNote",
     "ApiKey",
     "ApiKeyScope",
+    "AuditLog",
     "Base",
     "CaAllowlistEntry",
     "Certificate",

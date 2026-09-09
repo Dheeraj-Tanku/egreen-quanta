@@ -24,7 +24,11 @@ function Icon({ path }: { path: string }) {
 
 export function Sidebar() {
   const { atLeast } = useAuth();
-  const items = NAV_ITEMS.filter((i) => i.to !== "/admin" || atLeast("admin"));
+  const items = NAV_ITEMS.filter((i) => {
+    if (i.to === "/admin") return atLeast("admin");
+    if (i.to === "/audit") return atLeast("auditor");
+    return true;
+  });
 
   return (
     <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-surface/60 px-3 py-4 md:flex">

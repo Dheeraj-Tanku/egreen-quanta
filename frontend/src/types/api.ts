@@ -416,3 +416,33 @@ export interface MlModel {
   trained_by: string | null;
   trained_at: string;
 }
+
+// ---- Module 6: audit log ----
+
+export interface AuditRow {
+  seq: number;
+  ts: string;
+  actor_id: string | null;
+  actor_type: string;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  meta: Record<string, unknown>;
+  prev_hash: string;
+  row_hash: string;
+}
+
+export interface AuditPage {
+  items: AuditRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ChainVerification {
+  ok: boolean;
+  checked: number;
+  break_at: number | null;
+  head_hash: string | null;
+  head_seq: number | null;
+}
