@@ -8,6 +8,7 @@ import hashlib
 import pytest
 from app.models.trust_anchor import TrustAnchor
 from app.services.crypto import engine
+from app.services.crypto.errors import MaterialParseError
 from app.services.crypto.x509_utils import spki_sha256
 from cryptography.hazmat.primitives import serialization
 
@@ -137,3 +138,23 @@ async def test_key_reuse_detected(db_session, demo_pki) -> None:
         certificate_pem=ec_leaf.cert_pem,
     )
     assert any(f.code == "T11" for f in result.findings)
+
+
+async def test_verify_document_rejects_non_signature_file(db_session) -> None:
+    """A plain upload (e.g. a Markdown doc) must not fall through to the ASN.1
+    parser — the caller should get a clear 'unrecognised file' message."""
+    with pytest.raises(MaterialParseError, match="Unrecognised file"):
+        await engine.verify_document(
+            db_session,
+            filename="DEMO.md",
+            content=b"# Egreen Quanta\n\nThis is documentation, not a signature.\n",
+        )
+
+
+async def test_verify_document_routes_compact_jws(db_session, demo_pki) -> None:
+    """A raw compact JWS (no .jws extension) is still recognised by shape."""
+    import jwt as _jwt
+
+    token = _jwt.encode({"sub": "demo"}, demo_pki.leaves["healthy-ec"].key_pem, algorithm="ES256")
+    result = await engine.verify_document(db_session, filename="upload.bin", content=token.encode())
+    assert result.envelope == "jws"

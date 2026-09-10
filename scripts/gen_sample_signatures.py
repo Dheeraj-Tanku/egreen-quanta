@@ -27,10 +27,40 @@ from typing import Any
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, padding, rsa
 from cryptography.hazmat.primitives.serialization import pkcs7
-from gen_test_pki import DemoPKI, build_demo_pki
+from cryptography.x509 import load_pem_x509_certificate
+from gen_test_pki import DemoPKI, Issued
+from gen_test_pki import main as gen_test_pki_main
 
-OUT = Path(__file__).resolve().parents[1] / "datasets" / "documents"
+REPO = Path(__file__).resolve().parents[1]
+CERTS = REPO / "datasets" / "certs"
+OUT = REPO / "datasets" / "documents"
 MESSAGE = b"Egreen Quanta sample document. This text's integrity is protected by a signature.\n"
+
+
+def load_persisted_pki() -> DemoPKI:
+    """Load the demo PKI written by ``scripts/gen_test_pki.py`` (generating it
+    first if absent).
+
+    The sample signatures MUST be made with the *same* keys that end up in
+    ``datasets/certs/`` — that root is what ``make seed`` installs as a trust
+    anchor, so a signature made with a fresh throwaway PKI could never verify
+    as trusted.
+    """
+    if not (CERTS / "manifest.json").exists():
+        gen_test_pki_main()
+
+    def _issued(cert_file: str, key_file: str) -> Issued:
+        cert = load_pem_x509_certificate((CERTS / cert_file).read_bytes())
+        key = serialization.load_pem_private_key((CERTS / key_file).read_bytes(), password=None)
+        return Issued(cert, key)
+
+    manifest = json.loads((CERTS / "manifest.json").read_text())
+    root = _issued(manifest["root"], manifest["root"].replace(".pem", ".key"))
+    inter = _issued(manifest["intermediate"], manifest["intermediate"].replace(".pem", ".key"))
+    leaves = {
+        name: _issued(entry["cert"], entry["key"]) for name, entry in manifest["leaves"].items()
+    }
+    return DemoPKI(root=root, intermediate=inter, leaves=leaves)
 
 
 def _b64(data: bytes) -> str:
@@ -152,8 +182,26 @@ def _jws_tokens(pki: DemoPKI, manifest: list[dict]) -> None:
         "doc_sha256": digest.finalize().hex(),
     }
 
-    es256 = jwt.encode(claims, pki.leaves["healthy-ec"].key_pem, algorithm="ES256")
-    rs256 = jwt.encode(claims, pki.leaves["healthy-rsa"].key_pem, algorithm="RS256")
+    # Embed the signer chain as x5c so the verifier can actually check the
+    # signature (and so tampering is detectable) without a side-channel key.
+    def _x5c(name: str) -> list[str]:
+        chain = [pki.leaves[name].cert, pki.intermediate.cert, pki.root.cert]
+        return [
+            base64.b64encode(c.public_bytes(serialization.Encoding.DER)).decode() for c in chain
+        ]
+
+    es256 = jwt.encode(
+        claims,
+        pki.leaves["healthy-ec"].key_pem,
+        algorithm="ES256",
+        headers={"x5c": _x5c("healthy-ec")},
+    )
+    rs256 = jwt.encode(
+        claims,
+        pki.leaves["healthy-rsa"].key_pem,
+        algorithm="RS256",
+        headers={"x5c": _x5c("healthy-rsa")},
+    )
     (d / "es256.txt").write_text(es256)
     (d / "rs256.txt").write_text(rs256)
 
@@ -189,7 +237,10 @@ def _cms_signatures(pki: DemoPKI, manifest: list[dict]) -> None:
         .add_signer(signer.cert, signer.key, hashes.SHA256())
         .add_certificate(pki.intermediate.cert)
     )
-    der = builder.sign(serialization.Encoding.DER, [pkcs7.PKCS7Options.DetachedSignature])
+    der = builder.sign(
+        serialization.Encoding.DER,
+        [pkcs7.PKCS7Options.DetachedSignature, pkcs7.PKCS7Options.Binary],
+    )
     (d / "message.p7s").write_bytes(der)
     manifest.append(
         {
@@ -270,7 +321,7 @@ def _pades_pdf(pki: DemoPKI, manifest: list[dict]) -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    pki = build_demo_pki()
+    pki = load_persisted_pki()
     manifest: list[dict] = []
 
     _raw_bundles(pki, manifest)

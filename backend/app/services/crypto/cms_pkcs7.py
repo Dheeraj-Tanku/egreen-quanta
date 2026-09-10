@@ -7,6 +7,7 @@ Supports the common case: a single RSA/ECDSA signer with signed attributes.
 from __future__ import annotations
 
 import datetime as dt
+import re
 from dataclasses import dataclass, field
 
 from asn1crypto import cms as asn1_cms
@@ -49,6 +50,29 @@ class CmsResult:
     content: bytes | None
     errors: list[str] = field(default_factory=list)
     extra_certs_pem: list[str] = field(default_factory=list)
+
+
+_EOL_RE = re.compile(rb"\r\n|\r|\n")
+
+
+def _smime_canonical(data: bytes) -> bytes:
+    """S/MIME text canonicalisation (RFC 5751 §3.1.1): every line ending -> CRLF.
+
+    Signers such as ``cryptography``'s PKCS7 builder canonicalise the content this
+    way before computing ``messageDigest`` unless a binary flag is set, so a
+    verifier has to try this form too or it rejects every text-mode detached
+    signature.
+    """
+    return _EOL_RE.sub(b"\r\n", data)
+
+
+def _digest_matches(md_attr: bytes, content: bytes, hash_name: str) -> bool:
+    """True if the CMS messageDigest matches the content as binary *or* as
+    S/MIME-canonicalised text."""
+    if md_attr == raw_digest(content, hash_name):
+        return True
+    canon = _smime_canonical(content)
+    return canon != content and md_attr == raw_digest(canon, hash_name)
 
 
 def _load_signed_data(blob: bytes) -> asn1_cms.SignedData:
@@ -165,17 +189,20 @@ def verify_cms(blob: bytes, *, external_content: bytes | None = None) -> CmsResu
                 signing_time = attr["values"][0].native
         if content is None:
             errors.append("detached CMS but no content supplied to check the message digest")
-        elif md_attr is not None:
-            expected = raw_digest(content, hash_name)
-            if md_attr != expected:
-                errors.append("messageDigest attribute does not match the content")
+        elif md_attr is not None and not _digest_matches(md_attr, content, hash_name):
+            errors.append("messageDigest attribute does not match the content")
         signed_bytes = signed_attrs.untag().dump()
+        signed_candidates = [signed_bytes]
     else:
         if content is None:
             errors.append("no signed attributes and no content to verify against")
-            signed_bytes = b""
+            signed_candidates = [b""]
         else:
-            signed_bytes = content
+            # Signature is directly over the content: try binary and canonical text.
+            signed_candidates = [content]
+            canon = _smime_canonical(content)
+            if canon != content:
+                signed_candidates.append(canon)
 
     unsigned_attrs = si["unsigned_attrs"]
     if unsigned_attrs and unsigned_attrs.native:
@@ -185,8 +212,10 @@ def verify_cms(blob: bytes, *, external_content: bytes | None = None) -> CmsResu
 
     verified = False
     if signer_cert is not None and not errors:
-        verified = _verify_primitive(
-            signer_cert, signed_bytes, si["signature"].native, hash_name, sig_alg
+        sig_value = si["signature"].native
+        verified = any(
+            _verify_primitive(signer_cert, candidate, sig_value, hash_name, sig_alg)
+            for candidate in signed_candidates
         )
         if not verified:
             errors.append("signer signature does not verify")

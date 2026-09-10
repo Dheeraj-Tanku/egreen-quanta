@@ -331,7 +331,23 @@ async def verify_document(
         return await _verify_pdf(session, content, at_time)
     if lower.endswith((".jws", ".jwt")) or (content[:2] == b"ey" and content.count(b".") == 2):
         return _verify_jws(content)
-    return await _verify_cms(session, content, external_content, at_time)
+
+    # Everything else is treated as CMS/PKCS#7 — but only if it actually looks
+    # like one, so an unrelated upload gets a helpful error instead of a raw
+    # ASN.1 parser complaint.
+    cms_ext = lower.endswith((".p7s", ".p7m", ".p7b", ".p7c", ".cms", ".der", ".pkcs7"))
+    looks_der = content[:1] == b"\x30"
+    looks_pem = b"-----BEGIN" in content[:256] and (
+        b"PKCS7" in content[:256] or b"CMS" in content[:256]
+    )
+    if cms_ext or looks_der or looks_pem:
+        return await _verify_cms(session, content, external_content, at_time)
+
+    raise MaterialParseError(
+        "Unrecognised file. Upload a signed PDF (starts with %PDF-), a CMS/PKCS#7 "
+        "signature (.p7s / .p7m, DER or PEM), or a compact JWS token. This file "
+        "matches none of those."
+    )
 
 
 def _verify_jws(content: bytes) -> VerificationResult:
@@ -464,7 +480,7 @@ async def _verify_pdf(
 
     anchors = await enabled_anchor_certs(session)
     roots_pem = [a.public_bytes(serialization.Encoding.PEM) for a in anchors]
-    report = validate_pdf(content, trust_roots_pem=roots_pem)
+    report = await validate_pdf(content, trust_roots_pem=roots_pem)
 
     result = VerificationResult(
         verdict=Verdict.INDETERMINATE,

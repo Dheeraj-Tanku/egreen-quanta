@@ -32,12 +32,17 @@ class PdfReport:
     errors: list[str] = field(default_factory=list)
 
 
-def validate_pdf(data: bytes, *, trust_roots_pem: list[bytes] | None = None) -> PdfReport:
+async def validate_pdf(data: bytes, *, trust_roots_pem: list[bytes] | None = None) -> PdfReport:
     """Validate every embedded signature. ``trusted`` is only meaningful when trust roots
-    are supplied; otherwise it reflects pyHanko's own default (untrusted)."""
+    are supplied; otherwise it reflects pyHanko's own default (untrusted).
+
+    pyHanko's signature check is async; the sync ``validate_pdf_signature`` wrapper
+    deadlocks / no-ops when an event loop is already running (as it is inside the
+    FastAPI request), so we await the async API directly.
+    """
     try:
         from pyhanko.pdf_utils.reader import PdfFileReader
-        from pyhanko.sign.validation import validate_pdf_signature
+        from pyhanko.sign.validation import async_validate_pdf_signature
         from pyhanko_certvalidator import ValidationContext
     except ImportError as exc:  # pragma: no cover
         raise MaterialParseError(f"PDF validation unavailable: {exc}") from exc
@@ -59,15 +64,14 @@ def validate_pdf(data: bytes, *, trust_roots_pem: list[bytes] | None = None) -> 
 
     try:
         reader = PdfFileReader(io.BytesIO(data))
+        embedded = list(reader.embedded_signatures)
     except Exception as exc:
         raise MaterialParseError(f"Unreadable PDF: {exc}") from exc
 
-    embedded = list(reader.embedded_signatures)
     reports: list[PdfSignatureReport] = []
     for sig in embedded:
-        errors: list[str] = []
         try:
-            status = validate_pdf_signature(sig, vc)
+            status = await async_validate_pdf_signature(sig, signer_validation_context=vc)
             signer_subject = None
             with contextlib.suppress(Exception):
                 signer_subject = status.signing_cert.subject.human_friendly
@@ -82,10 +86,11 @@ def validate_pdf(data: bytes, *, trust_roots_pem: list[bytes] | None = None) -> 
                     signer_subject=signer_subject,
                     signing_time=reported_dt.isoformat() if reported_dt is not None else None,
                     digest_algorithm=getattr(status, "md_algorithm", None),
-                    errors=errors,
+                    errors=[],
                 )
             )
         except Exception as exc:
+            log.warning("pdf_signature_validation_failed", error=str(exc))
             reports.append(
                 PdfSignatureReport(
                     field_name=getattr(sig, "field_name", "?"),
